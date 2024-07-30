@@ -135,31 +135,35 @@ class CouponController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
         $coupon = Coupon::find($id);
         if (!$coupon) {
             return response()->json(['error' => 'Coupon not found'], 404);
         }
+    
         $validate = [
             'discount_value' => 'required',
-            'coupon_start_date' => 'date',
-            'coupon_end_date' => 'date',
+            'coupon_start_date' => 'required|date_format:d-m-Y',
+            'coupon_end_date' => 'required|date_format:d-m-Y',
             'coupon_quantity' => 'numeric',
             'status' => 'nullable|string|in:active,inactive',
         ];
-        // kiem tra du lieu input -> validate
+    
         $validator = Validator::make($request->all(), $validate);
-        // thong bao neu du lieu khong hop le
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()], 422);
         }
+    
         $coupon->discount_value = $request->input('discount_value');
-        $coupon->coupon_start_date = $request->input('coupon_start_date');
-        $coupon->coupon_end_date = $request->input('coupon_end_date');
+        $coupon->coupon_start_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_start_date'))->format('Y-m-d');
+        $coupon->coupon_end_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_end_date'))->format('Y-m-d');
         $coupon->coupon_quantity = $request->input('coupon_quantity');
         $coupon->status = $request->input('status');
-        return response()->json(['message' => 'Coupon updated successfully', 'blog' => $coupon], 201);
+    
+        $coupon->save();
+    
+        return response()->json(['message' => 'Coupon updated successfully', 'coupon' => $coupon], 200);
     }
+    
 
     /**
      * Remove the specified resource from storage.

@@ -502,16 +502,16 @@ class GuestController extends Controller
         }
     }
 
-    public function responeVNPAY(Request $request): \Illuminate\Http\JsonResponse
+    public function responeVNPAY(Request $request)
     {
         if ($request->vnp_ResponseCode === "00") {
             DB::table('orders')->where('order_code', '=', $request->vnp_TxnRef)
                 ->update(['payment_status' => 'thanh toán thành công']);
             $order = Order::where('order_code', $request->vnp_TxnRef)->first();
             Mail::to($order->email)->send(new PaymentSuccess($order));
-            return response()->json('message', 'Thanh toán đơn hàng thành công');
+            return redirect()->away('http://localhost:5173/thanhcong');
         } else {
-            return response()->json('message', 'Thanh toán đơn hàng thất bại');
+            return redirect()->away('http://localhost:5173/thatbai'); 
         }
     }
 
@@ -943,6 +943,7 @@ class GuestController extends Controller
 //            ]
 //        ]);
 //    }
+
     public function taikhoan(Request $request)
     {
         $user = $request->user();
@@ -1402,30 +1403,38 @@ class GuestController extends Controller
 
     public function danhgia(Request $request)
     {
-        $validatedData = Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'id_user' => 'required|exists:users,id',
             'id_product' => 'required|exists:products,id',
             'rate' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string',
         ]);
-        if ($validatedData->fails()) {
-            return response()->json(['error' => $validatedData->errors()], 422);
+    
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
         }
+    
+        $validatedData = $validator->validated();
+    
         $hasOrdered = Order::where('id_user', $validatedData['id_user'])
             ->whereHas('items', function ($query) use ($validatedData) {
                 $query->where('id_product', $validatedData['id_product']);
             })->exists();
+    
         if (!$hasOrdered) {
             return response()->json([
                 'message' => 'Người dùng cần phải mua sản phẩm này trước khi được phép đánh giá.'
             ], 403);
         }
+    
         $feedback = Feedback::updateOrCreate(
             ['id_user' => $validatedData['id_user'], 'id_product' => $validatedData['id_product']],
             ['rate' => $validatedData['rate'], 'comment' => $validatedData['comment']]
         );
+    
         return response()->json($feedback, 201);
     }
+    
 
     public function xem_ma_giam_gia()
     {
