@@ -134,36 +134,43 @@ class CouponController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
-    {
-        $coupon = Coupon::find($id);
-        if (!$coupon) {
-            return response()->json(['error' => 'Coupon not found'], 404);
-        }
-    
-        $validate = [
-            'discount_value' => 'required',
-            'coupon_start_date' => 'required|date_format:d-m-Y',
-            'coupon_end_date' => 'required|date_format:d-m-Y',
-            'coupon_quantity' => 'numeric',
-            'status' => 'nullable|string|in:active,inactive',
-        ];
-    
-        $validator = Validator::make($request->all(), $validate);
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 422);
-        }
-    
-        $coupon->discount_value = $request->input('discount_value');
-        $coupon->coupon_start_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_start_date'))->format('Y-m-d');
-        $coupon->coupon_end_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_end_date'))->format('Y-m-d');
-        $coupon->coupon_quantity = $request->input('coupon_quantity');
-        $coupon->status = $request->input('status');
-    
-        $coupon->save();
-    
-        return response()->json(['message' => 'Coupon updated successfully', 'coupon' => $coupon], 200);
+{
+    $coupon = Coupon::find($id);
+    if (!$coupon) {
+        return response()->json(['error' => 'Coupon not found'], 404);
     }
-    
+
+    $validate = [
+        'discount_value' => 'required',
+        'coupon_start_date' => 'sometimes|required|date_format:d-m-Y',
+        'coupon_end_date' => 'sometimes|required|date_format:d-m-Y',
+        'coupon_quantity' => 'numeric',
+        'status' => 'nullable|string|in:active,inactive',
+    ];
+
+    $validator = Validator::make($request->all(), $validate);
+    if ($validator->fails()) {
+        return response()->json(['error' => $validator->errors()], 422);
+    }
+
+    $coupon->discount_value = $request->input('discount_value', $coupon->discount_value);
+
+    if ($request->has('coupon_start_date')) {
+        $coupon->coupon_start_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_start_date'))->format('Y-m-d');
+    }
+
+    if ($request->has('coupon_end_date')) {
+        $coupon->coupon_end_date = Carbon::createFromFormat('d-m-Y', $request->input('coupon_end_date'))->format('Y-m-d');
+    }
+
+    $coupon->coupon_quantity = $request->input('coupon_quantity', $coupon->coupon_quantity);
+    $coupon->status = $request->input('status', $coupon->status);
+
+    $coupon->save();
+
+    return response()->json(['message' => 'Coupon updated successfully', 'coupon' => $coupon], 200);
+}
+
 
     /**
      * Remove the specified resource from storage.
